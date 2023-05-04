@@ -1,21 +1,21 @@
 version: "3.7"
 services:
   # PostgreSQL Database
-  postgres-wikijs:
-    container_name: postgres-wikijs
-    image: postgres:11-alpine
-    environment:
-      POSTGRES_DB: wiki
-      POSTGRES_PASSWORD: wikijsrocks
-      POSTGRES_USER: wikijs
-    logging:
-      driver: "none"
-    restart: unless-stopped
+  postgres-wiki:
+    image: postgres:12-alpine
+    container_name: postgres-wiki
+    ports:
+      - 5432:5432
+    restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wikijs"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 5
+    environment:
+      POSTGRES_DB: wikijsdb
+      POSTGRES_USER: wikijs
+      POSTGRES_PASSWORD: wikijsrocks
     volumes:
       - db-data:/var/lib/postgresql/data
 
@@ -23,29 +23,29 @@ services:
   nginx:
     container_name: nginx
     depends_on:
-      - wiki
+      - wiki-app
     build:
       context: ./nginx
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "80:80"
+      - 80:80
 
-  wiki:
+  wiki-app:
     container_name: wikijs-app
     image: ghcr.io/requarks/wiki:2
     depends_on:
-      - postgres-wikijs
+      - postgres-wiki
     environment:
       DB_TYPE: postgres
-      DB_HOST: db
+      DB_HOST: postgres-wiki
       DB_PORT: 5432
       DB_USER: wikijs
       DB_PASS: wikijsrocks
-      DB_NAME: wiki
+      DB_NAME: wikijsdb
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - 3000:3000
 
 volumes:
   db-data:
